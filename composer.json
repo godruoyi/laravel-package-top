@@ -1,5 +1,22 @@
 {
+    "name": "godruoyi/ocr",
+    "description": "The Best Image Ocr SDK For BAT.",
+    "keywords": ["ocr", "image", "百度OCR", "腾讯OCR", "阿里云OCR"],
+    "homepage": "http://github.com/godruoyi",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "godruoyi",
+            "email": "godruoyi@gmail.com"
+        }
+    ],
     "require": {
         "guzzlehttp/guzzle": "^6.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Godruoyi\\Packagist\\": "src/"
+        }
     }
 }
