@@ -4,10 +4,11 @@ namespace Godruoyi\Packagist;
 
 use GuzzleHttp\Client;
 use InvalidArgumentException;
+use Symfony\Component\Filesystem\Filesystem;
 
 final class Packagist
 {
-    protected $config;
+    protected $savePath;
 
     protected $keyword;
 
@@ -19,7 +20,7 @@ final class Packagist
 
     protected $exceptKeywords = [];
 
-    protected $defaultUrl = 'https://m58222sh95-2.algolianet.com/1/indexes/*/queries';
+    protected $defaultUrl = '';
 
     /**
      * Register Client Instance
@@ -27,10 +28,13 @@ final class Packagist
      * @param string $applicationId
      * @param string $apiKey       
      */
-    public function __construct($applicationId, $apiKey)
+    public function __construct($applicationId, $apiKey, $savePath = null, $requestUrl = '')
     {
         $this->applicationId = $applicationId;
         $this->apiKey = $apiKey;
+
+        $this->defaultUrl = $requestUrl;
+        $this->savePath = $savePath;
     }
 
     /**
@@ -48,54 +52,91 @@ final class Packagist
         $requestData = [
             'headers' => ['content-type' => 'application/json'],
             'query' => $this->buildQueryString(),
-            'body'  => json_encode($this->buildFormData(), JSON_UNESCAPED_UNICODE)
+            'body'  => $this->buildFormData()
         ];
 
         var_dump($requestData);
-        $result = $this->getHttpClient()->request('POST', $this->defaultUrl, $requestData);
+        var_dump($defaultUrl);
 
-        var_dump($result);
-    }
+        exit;
 
+        try {
+            $result = $this->getHttpClient()->request('POST', $this->getRequestUrl(), $requestData);
 
-    public function write(array $result, $path)
-    {
-        $path = $path ?: $this->getDefaultResultFilePath ();
+            return $this->write($this->parseToArray($result));
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            if ($e->hasResponse()) {
+                $response = (string) $e->getResponse();
+            } else {
+                $response = $e->getMessage();
+            }
+
+            echo "Request failure,response: \r\n{$response}\r\n\r\n";
+        }
     }
 
     /**
-     * Set Request Url
+     * Write Result to path
      * 
-     * @param string $url
-     *
-     * @return static
+     * @param  array  $result
+     * 
+     * @return bool
      */
-    public function setUrl($url)
+    public function write(array $result)
     {
-        $this->defaultUrl = $url;
+        $results = $result['results']['hits'] ?? []; 
 
-        return $this;
+        $fs = new Filesystem();
+
+        if (! $fs->exists($path = $this->getResultSavePath())) {
+            echo "File not exists.\r\n";
+            exit;
+        }
+
+        foreach ($results as $result) {
+
+            $name = $result['name'];
+            $description = $result['description'];
+            $repository = $result['repository'];
+            $downloads = $result['meta']['downloads'];
+            $favers = $result['meta']['favers'];
+
+            $fs->appendToFile($path, "{$name} - {$description} - [{$name}]({$repository}) - {$downloads} - {$favers}\r\n\r\n\r\n\r\n");
+        }
+    }
+
+    /**
+     * Parse Response To array
+     * 
+     * @param  GuzzleHttp\Psr7\Response $response
+     * 
+     * @return array
+     */
+    public function parseToArray(\GuzzleHttp\Psr7\Response $response)
+    {
+        $body = (string) $response->getBody();
+
+        $result = json_decode($body, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            echo "Formatted json failed.\r\n";
+            exit;
+        }
+
+        return $result;
     }
 
     /**
      * Build Request Body Form data
      * 
-     * @return array
+     * @return string
      */
-    protected function buildFormData (): array
+    protected function buildFormData (): string
     {
-        return [
-            'requests' => [
-                [
-                    'indexName' => 'packagist',
-                    'params' => [
-                        'facetFilters' => [
-                            [http_build_query(['tags' => $this->keyword])]
-                        ]
-                    ]
-                ]
-            ]
-        ];
+        $keyword = $this->keyword;
+        $facetFilters = urlencode(json_encode([["tags:{$keyword}"]]));
+
+        return '{"requests":[{"indexName":"packagist","params":"facetFilters='.$facetFilters.'"}]}';
     }
 
     /**
@@ -119,6 +160,26 @@ final class Packagist
     protected function getHttpClient ()
     {
         return new Client ();
+    }
+
+    /**
+     * Get Save Path
+     * 
+     * @return string
+     */
+    protected function getResultSavePath(): string
+    {
+        return $this->savePath ?: $this->getDefaultResultFilePath();
+    }
+
+    /**
+     * Get Request url
+     * 
+     * @return string
+     */
+    protected function getRequestUrl(): string
+    {
+        return $this->defaultUrl ?? 'https://m58222sh95-2.algolianet.com/1/indexes/*/queries';
     }
 
     /**

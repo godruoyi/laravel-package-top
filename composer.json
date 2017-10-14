@@ -12,7 +12,8 @@
         }
     ],
     "require": {
-        "guzzlehttp/guzzle": "^6.3"
+        "guzzlehttp/guzzle": "^6.3",
+        "symfony/filesystem": "^3.3"
     },
     "autoload": {
         "psr-4": {
