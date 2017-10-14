@@ -5,6 +5,7 @@ namespace Godruoyi\Packagist;
 use GuzzleHttp\Client;
 use InvalidArgumentException;
 use Symfony\Component\Filesystem\Filesystem;
+use Symfony\Component\Filesystem\Exception\IOExceptionInterface;
 
 final class Packagist
 {
@@ -52,13 +53,12 @@ final class Packagist
         $requestData = [
             'headers' => ['content-type' => 'application/json'],
             'query' => $this->buildQueryString(),
-            'body'  => $this->buildFormData()
+            'body'  => $this->buildFormData(),
+            'verify'=> false
         ];
 
-        var_dump($requestData);
-        var_dump($defaultUrl);
 
-        exit;
+        echo "start search,the keyword: '{$keyword}', total: '{$total}'\r\n";
 
         try {
             $result = $this->getHttpClient()->request('POST', $this->getRequestUrl(), $requestData);
@@ -84,6 +84,8 @@ final class Packagist
      */
     public function write(array $result)
     {
+        echo "Fetch done,start write...\r\n";
+
         $results = $result['results']['hits'] ?? []; 
 
         $fs = new Filesystem();
@@ -101,7 +103,11 @@ final class Packagist
             $downloads = $result['meta']['downloads'];
             $favers = $result['meta']['favers'];
 
-            $fs->appendToFile($path, "{$name} - {$description} - [{$name}]({$repository}) - {$downloads} - {$favers}\r\n\r\n\r\n\r\n");
+            echo "{$name} -- \r\n";
+
+            $str = "{$name} - {$description} - [{$name}]({$repository}) - {$downloads} - {$favers}\r\n\r\n\r\n\r\n";
+
+            $fs->appendToFile($path, $str);
         }
     }
 
@@ -179,7 +185,7 @@ final class Packagist
      */
     protected function getRequestUrl(): string
     {
-        return $this->defaultUrl ?? 'https://m58222sh95-2.algolianet.com/1/indexes/*/queries';
+        return empty($this->defaultUrl) ? 'https://m58222sh95-2.algolianet.com/1/indexes/*/queries' : $this->defaultUrl;
     }
 
     /**
@@ -188,6 +194,6 @@ final class Packagist
      */
     protected function getDefaultResultFilePath (): string
     {
-        return __DIR__ . '/result.md';
+        return __DIR__ . '/../result.md';
     }
 }
