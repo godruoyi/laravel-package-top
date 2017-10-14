@@ -13,13 +13,13 @@ final class Packagist
 
     protected $keyword;
 
-    protected $page = 0;
+    protected $perPage = 50;
 
     protected $applicationId;
 
     protected $apiKey;
 
-    protected $exceptKeywords = [];
+    protected $exceptPackage = [];
 
     protected $defaultUrl = '';
 
@@ -42,13 +42,16 @@ final class Packagist
      * Search top from Packagist
      * 
      * @param  string $keyword
-     * @param  int $total
+     * @param  int $perPage
      * 
      * @return array
      */
-    public function search($keyword = 'laravel', $total = 100)
+    public function search($keyword = 'laravel', $perPage = NULL)
     {
         $this->keyword = $keyword;
+        $this->perPage = 0 | $perPage;
+
+        $this->laravelPackageFilter($keyword);
 
         $requestData = [
             'headers' => ['content-type' => 'application/json'],
@@ -57,8 +60,7 @@ final class Packagist
             'verify'=> false
         ];
 
-
-        echo "start search,the keyword: '{$keyword}', total: '{$total}'\r\n";
+        echo "start search,the keyword: '{$keyword}', perPage: '{$perPage}'\r\n";
 
         try {
             $result = $this->getHttpClient()->request('POST', $this->getRequestUrl(), $requestData);
@@ -86,7 +88,7 @@ final class Packagist
     {
         echo "Fetch done,start write...\r\n";
 
-        $results = $result['results']['hits'] ?? []; 
+        $results = $result['results'][0]['hits'] ?? [];
 
         $fs = new Filesystem();
 
@@ -96,16 +98,17 @@ final class Packagist
         }
 
         foreach ($results as $result) {
-
             $name = $result['name'];
+            if ($this->shouleExceptPakage($name)) {
+                continue;
+            }
+
             $description = $result['description'];
             $repository = $result['repository'];
             $downloads = $result['meta']['downloads'];
             $favers = $result['meta']['favers'];
 
-            echo "{$name} -- \r\n";
-
-            $str = "{$name} - {$description} - [{$name}]({$repository}) - {$downloads} - {$favers}\r\n\r\n\r\n\r\n";
+            $str = "| [{$name}]({$repository}) | {$downloads} | {$favers} | {$description} |\r\n";
 
             $fs->appendToFile($path, $str);
         }
@@ -133,16 +136,78 @@ final class Packagist
     }
 
     /**
+     * Except Package
+     * 
+     * @param  array  $packages
+     * 
+     * @return static
+     */
+    public function except(array $packages = [])
+    {
+        $this->exceptPackage = array_merge($this->exceptPackage, $packages);
+
+        return $this;
+    }
+
+    /**
+     * Laravel package filter
+     * 
+     * @param  string $keyword
+     * 
+     * @return void
+     */
+    protected function laravelPackageFilter($keyword)
+    {
+        if (strtolower($keyword) == 'laravel') {
+            $this->except($this->exceptDefaultLaravelPackage());
+        }
+    }
+
+    /**
+     * Default laravel except package
+     * 
+     * @return array
+     */
+    public function exceptDefaultLaravelPackage(): array
+    {
+        return [
+            'laravel/*'
+        ];
+    }
+
+    /**
+     * Shoule except
+     * 
+     * @param  string $name like godruoyi/ocr
+     * 
+     * @return [bool
+     */
+    public function shouleExceptPakage($name)
+    {
+        list($firstName, $secondName) = explode('/', $name);
+
+        foreach ($this->exceptPackage as $ePackage) {
+            list($eFirstName, $eSecondName) = explode('/', $ePackage);
+
+            if (($ePackage == $name) || ($eSecondName == '*' && $eFirstName == $firstName)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Build Request Body Form data
      * 
      * @return string
      */
     protected function buildFormData (): string
     {
-        $keyword = $this->keyword;
-        $facetFilters = urlencode(json_encode([["tags:{$keyword}"]]));
-
-        return '{"requests":[{"indexName":"packagist","params":"facetFilters='.$facetFilters.'"}]}';
+        return sprintf('{"requests":[{"indexName":"packagist","params":"hitsPerPage=%s&facetFilters=%s"}]}',
+            ($this->perPage <= 0 ? 50 : $this->perPage),
+            urlencode(json_encode([["tags:{$this->keyword}"]]))  
+        );
     }
 
     /**
@@ -185,7 +250,7 @@ final class Packagist
      */
     protected function getRequestUrl(): string
     {
-        return empty($this->defaultUrl) ? 'https://m58222sh95-2.algolianet.com/1/indexes/*/queries' : $this->defaultUrl;
+        return empty($this->defaultUrl) ? 'http://m58222sh95-2.algolianet.com/1/indexes/*/queries' : $this->defaultUrl;
     }
 
     /**
