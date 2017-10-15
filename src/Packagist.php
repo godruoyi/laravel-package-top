@@ -21,6 +21,8 @@ final class Packagist
 
     protected $exceptPackage = [];
 
+    protected $orderBy = ['downloads' => 'desc'];
+
     protected $defaultUrl = '';
 
     /**
@@ -51,7 +53,7 @@ final class Packagist
         $this->keyword = $keyword;
         $this->perPage = 0 | $perPage;
 
-        $this->laravelPackageFilter($keyword);
+        $this->viaPackageFilter($keyword);
 
         $requestData = [
             'headers' => ['content-type' => 'application/json'],
@@ -65,7 +67,7 @@ final class Packagist
         try {
             $result = $this->getHttpClient()->request('POST', $this->getRequestUrl(), $requestData);
 
-            return $this->write($this->parseToArray($result));
+            return $this->write($this->parseAndExceptPackages($result));
         } catch (\GuzzleHttp\Exception\ClientException $e) {
             if ($e->hasResponse()) {
                 $response = (string) $e->getResponse();
@@ -84,11 +86,9 @@ final class Packagist
      * 
      * @return bool
      */
-    public function write(array $result)
+    public function write(array $results)
     {
         echo "Fetch done,start write...\r\n";
-
-        $results = $result['results'][0]['hits'] ?? [];
 
         $fs = new Filesystem();
 
@@ -97,18 +97,19 @@ final class Packagist
             exit;
         }
 
-        foreach ($results as $result) {
-            $name = $result['name'];
-            if ($this->shouleExceptPakage($name)) {
-                continue;
-            }
+        if (! empty($this->orderBy)) {
+            $results = $this->sortBy($results, key($this->orderBy), current($this->orderBy));
+        }
 
+        foreach ($results as $index => $result) {
+            $name = $result['name'];
             $description = $result['description'];
             $repository = $result['repository'];
-            $downloads = $result['meta']['downloads'];
-            $favers = $result['meta']['favers'];
+            $downloads = $result['downloads'];
+            $favers = $result['favers'];
+            $number = $index + 1;
 
-            $str = "| [{$name}]({$repository}) | {$downloads} | {$favers} | {$description} |\r\n";
+            $str = "| {$number} | [{$name}]({$repository}) | {$downloads} | {$favers} | {$description} |\r\n";
 
             $fs->appendToFile($path, $str);
         }
@@ -121,7 +122,7 @@ final class Packagist
      * 
      * @return array
      */
-    public function parseToArray(\GuzzleHttp\Psr7\Response $response)
+    public function parseAndExceptPackages(\GuzzleHttp\Psr7\Response $response)
     {
         $body = (string) $response->getBody();
 
@@ -132,7 +133,25 @@ final class Packagist
             exit;
         }
 
-        return $result;
+        $results = $result['results'][0]['hits'] ?? [];
+        $data = [];
+
+        foreach ($results as $package) {
+            if ($this->shouleExceptPakage($package['name'])) {
+                continue;
+            }
+
+            $data[] = [
+                'description' => $package['description'],
+                'repository' => $package['repository'],
+                'downloads' => $package['meta']['downloads'],
+                'favers' => $package['meta']['favers'],
+                'name' => $package['name']
+            ];
+
+        }
+
+        return $data;
     }
 
     /**
@@ -150,13 +169,53 @@ final class Packagist
     }
 
     /**
+     * Order BY
+     * 
+     * @param  [type] $key  
+     * @param  string $order
+     * @return [type]       
+     */
+    public function orderBy($key, $order = 'desc')
+    {
+        $this->orderBy = [$key => $order];
+
+        return $this;
+    }
+
+    /**
+     * sortBy
+     * 
+     * @param  array  $results
+     * @param  string $name   
+     * @param  string $order  
+     * 
+     * @return array
+     */
+    protected function sortBy(array $results, $name, $order = 'desc')
+    {
+        usort($results, function($package1, $package2) use ($order, $name){
+            if ($package1[$name] == $package2[$name]) {
+                return 0;
+            }
+
+            if (strtolower($order) === 'desc') {
+                return ($package1[$name] < $package2[$name]) ? 1 : -1;
+            }
+
+            return ($package1[$name] < $package2[$name]) ? -1 : 1;
+        });
+
+        return $results;
+    }
+
+    /**
      * Laravel package filter
      * 
      * @param  string $keyword
      * 
      * @return void
      */
-    protected function laravelPackageFilter($keyword)
+    protected function viaPackageFilter($keyword)
     {
         if (strtolower($keyword) == 'laravel') {
             $this->except($this->exceptDefaultLaravelPackage());
