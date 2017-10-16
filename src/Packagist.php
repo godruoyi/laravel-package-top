@@ -27,9 +27,9 @@ final class Packagist
 
     /**
      * Register Client Instance
-     * 
+     *
      * @param string $applicationId
-     * @param string $apiKey       
+     * @param string $apiKey
      */
     public function __construct($applicationId, $apiKey, $savePath = null, $requestUrl = '')
     {
@@ -42,13 +42,13 @@ final class Packagist
 
     /**
      * Search top from Packagist
-     * 
+     *
      * @param  string $keyword
      * @param  int $perPage
-     * 
+     *
      * @return array
      */
-    public function search($keyword = 'laravel', $perPage = NULL)
+    public function search($keyword = 'laravel', $perPage = null)
     {
         $this->keyword = $keyword;
         $this->perPage = 0 | $perPage;
@@ -81,21 +81,16 @@ final class Packagist
 
     /**
      * Write Result to path
-     * 
+     *
      * @param  array  $result
-     * 
+     *
      * @return bool
      */
-    public function write(array $results)
+    protected function write(array $results)
     {
         echo "Fetch done,start write...\r\n";
 
         $fs = new Filesystem();
-
-        if (! $fs->exists($path = $this->getResultSavePath())) {
-            echo "File not exists.\r\n";
-            exit;
-        }
 
         if (! empty($this->orderBy)) {
             $results = $this->sortBy($results, key($this->orderBy), current($this->orderBy));
@@ -111,15 +106,15 @@ final class Packagist
 
             $str = "| {$number} | [{$name}]({$repository}) | {$downloads} | {$favers} | {$description} |\r\n";
 
-            $fs->appendToFile($path, $str);
+            $fs->appendToFile($this->getResultSavePath(), $str);
         }
     }
 
     /**
      * Parse Response To array
-     * 
+     *
      * @param  GuzzleHttp\Psr7\Response $response
-     * 
+     *
      * @return array
      */
     public function parseAndExceptPackages(\GuzzleHttp\Psr7\Response $response)
@@ -148,7 +143,6 @@ final class Packagist
                 'favers' => $package['meta']['favers'],
                 'name' => $package['name']
             ];
-
         }
 
         return $data;
@@ -156,9 +150,9 @@ final class Packagist
 
     /**
      * Except Package
-     * 
+     *
      * @param  array  $packages
-     * 
+     *
      * @return static
      */
     public function except(array $packages = [])
@@ -170,10 +164,11 @@ final class Packagist
 
     /**
      * Order BY
-     * 
-     * @param  [type] $key  
+     *
+     * @param  string $key
      * @param  string $order
-     * @return [type]       
+     *
+     * @return static
      */
     public function orderBy($key, $order = 'desc')
     {
@@ -184,16 +179,16 @@ final class Packagist
 
     /**
      * sortBy
-     * 
+     *
      * @param  array  $results
-     * @param  string $name   
-     * @param  string $order  
-     * 
+     * @param  string $name
+     * @param  string $order
+     *
      * @return array
      */
     protected function sortBy(array $results, $name, $order = 'desc')
     {
-        usort($results, function($package1, $package2) use ($order, $name){
+        usort($results, function ($package1, $package2) use ($order, $name) {
             if ($package1[$name] == $package2[$name]) {
                 return 0;
             }
@@ -210,9 +205,9 @@ final class Packagist
 
     /**
      * Laravel package filter
-     * 
+     *
      * @param  string $keyword
-     * 
+     *
      * @return void
      */
     protected function viaPackageFilter($keyword)
@@ -224,7 +219,7 @@ final class Packagist
 
     /**
      * Default laravel except package
-     * 
+     *
      * @return array
      */
     public function exceptDefaultLaravelPackage(): array
@@ -235,10 +230,24 @@ final class Packagist
     }
 
     /**
+     * Set result path
+     *
+     * @param string $path
+     *
+     * @return static
+     */
+    public function setResultPath($path)
+    {
+        $this->savePath = $path;
+
+        return $this;
+    }
+
+    /**
      * Shoule except
-     * 
+     *
      * @param  string $name like godruoyi/ocr
-     * 
+     *
      * @return [bool
      */
     public function shouleExceptPakage($name)
@@ -258,23 +267,24 @@ final class Packagist
 
     /**
      * Build Request Body Form data
-     * 
+     *
      * @return string
      */
-    protected function buildFormData (): string
+    protected function buildFormData(): string
     {
-        return sprintf('{"requests":[{"indexName":"packagist","params":"hitsPerPage=%s&facetFilters=%s"}]}',
+        return sprintf(
+            '{"requests":[{"indexName":"packagist","params":"hitsPerPage=%s&facetFilters=%s"}]}',
             ($this->perPage <= 0 ? 50 : $this->perPage),
-            urlencode(json_encode([["tags:{$this->keyword}"]]))  
+            urlencode(json_encode([["tags:{$this->keyword}"]]))
         );
     }
 
     /**
      * Build Request Query String
-     * 
+     *
      * @return array
      */
-    protected function buildQueryString (): array
+    protected function buildQueryString(): array
     {
         return [
             'x-algolia-application-id' => $this->applicationId,
@@ -284,17 +294,17 @@ final class Packagist
 
     /**
      * Get Http Client Instance
-     * 
+     *
      * @return \GuzzleHttp\Client
      */
-    protected function getHttpClient ()
+    protected function getHttpClient()
     {
-        return new Client ();
+        return new Client();
     }
 
     /**
      * Get Save Path
-     * 
+     *
      * @return string
      */
     protected function getResultSavePath(): string
@@ -304,7 +314,7 @@ final class Packagist
 
     /**
      * Get Request url
-     * 
+     *
      * @return string
      */
     protected function getRequestUrl(): string
@@ -314,9 +324,9 @@ final class Packagist
 
     /**
      * Get Default Result file path
-     * 
+     *
      */
-    protected function getDefaultResultFilePath (): string
+    protected function getDefaultResultFilePath(): string
     {
         return __DIR__ . '/../result.md';
     }
