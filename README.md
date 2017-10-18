@@ -12,13 +12,13 @@
 
 > 你可以 `clone` 该项目，运行根目录下的 `test.php` 来同步更新。还可以自定义排序规则、搜索关键字等。记得 `star` 哟！！ :smile:
 
-相信下面这些扩展包会让你的编码更加高效 :smile:。
+相信下面这些扩展包会让你的编码更加高效。
 
 ## 排名（下载量）
 
 | 排名 | 包地址 | 下载次数 | Star | 描述 |
 |---|---|---|---|---|
-| 1 | [intervention/image](https://github.com/Intervention/image) | 8332672 | 5878 | Image handling and manipulation library with support for Laravel integration |
+| 1 | [intervention/image](https://github.com/Intervention/image) | 8332672 | 5878 | 图片处理。包括剪辑、压缩、灰度化等等。 |
 | 2 | [barryvdh/laravel-debugbar](https://github.com/barryvdh/laravel-debugbar) | 5971716 | 5892 | PHP Debugbar integration for Laravel |
 | 3 | [barryvdh/laravel-ide-helper](https://github.com/barryvdh/laravel-ide-helper) | 5870472 | 5570 | Laravel IDE Helper, generates correct PHPDocs for all Facade classes, to improve auto-completion. |
 | 4 | [maatwebsite/excel](https://github.com/Maatwebsite/Laravel-Excel) | 4431310 | 4051 | An eloquent way of importing and exporting Excel and CSV in Laravel 4 with the power of PHPExcel |
