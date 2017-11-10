@@ -343,7 +343,7 @@ final class Packagist
      */
     public function translate(string $appid, string $secret)
     {
-        $this->translator = new Service\BaiduTranslate($appid, $secret);
+        $this->translator = new Service\YoudaoTranslate($appid, $secret);
 
         return $this;
     }
