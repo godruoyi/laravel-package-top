@@ -25,6 +25,8 @@ final class Packagist
 
     protected $defaultUrl = '';
 
+    protected $translator;
+
     /**
      * Register Client Instance
      *
@@ -98,7 +100,7 @@ final class Packagist
 
         foreach ($results as $index => $result) {
             $name = $result['name'];
-            $description = $result['description'];
+            $description = is_null($this->translator) ? $result['description'] : $this->translator->trans($result['description']);
             $repository = $result['repository'];
             $downloads = $result['downloads'];
             $favers = $result['favers'];
@@ -329,5 +331,20 @@ final class Packagist
     protected function getDefaultResultFilePath(): string
     {
         return __DIR__ . '/../result.md';
+    }
+
+    /**
+     * Set Translator
+     *
+     * @param  string $appid
+     * @param  string $secret
+     *
+     * @return
+     */
+    public function translate(string $appid, string $secret)
+    {
+        $this->translator = new Service\BaiduTranslate($appid, $secret);
+
+        return $this;
     }
 }
