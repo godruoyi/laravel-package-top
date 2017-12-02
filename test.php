@@ -9,6 +9,6 @@ $packaglist = new \Godruoyi\Packagist\Packagist(
 
 $packaglist->except(['composer/installers', 'illuminate/*'])
     ->orderBy('downloads', 'desc')
-    ->translate('baidu/youdao appid', 'baidu/youdao secret')
+    ->translate('28b56d1aa3fab6bd', 'wJWR0fZp3nfAeL7UMpTPpvecgGsdLYmz')
     ->setResultPath(__DIR__ . '/test.md')
     ->search('laravel', 120);
