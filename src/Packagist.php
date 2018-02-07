@@ -64,7 +64,7 @@ final class Packagist
             'verify'=> false
         ];
 
-        echo "start search,the keyword: '{$keyword}', perPage: '{$perPage}'\r\n";
+        echo "Start search,the keyword: '{$keyword}', per-page: '{$perPage}'\r\n";
 
         try {
             $result = $this->getHttpClient()->request('POST', $this->getRequestUrl(), $requestData);
